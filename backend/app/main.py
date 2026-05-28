@@ -2,9 +2,11 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.auth import router as auth_router
 from backend.app.database.connection import get_db
 
 app = FastAPI()
+app.include_router(auth_router)
 
 
 @app.get("/health")
