@@ -1,3 +1,5 @@
+"""Database model for user accounts."""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
@@ -7,6 +9,7 @@ from backend.app.database.connection import Base
 
 
 class User(Base):
+    """Represents a registered user in the system."""
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -17,4 +20,3 @@ class User(Base):
         server_default=func.now(),
         nullable=False,
     )
-

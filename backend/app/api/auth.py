@@ -1,3 +1,5 @@
+"""Authentication API routes for user signup, login, and profile retrieval."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def signup(payload: SignupRequest, db: AsyncSession = Depends(get_db)) -> User:
+    """Registers a new user and returns the created user details."""
     normalized_email = payload.email.lower()
 
     existing_user = await db.execute(select(User).where(User.email == normalized_email))
@@ -35,6 +38,7 @@ async def signup(payload: SignupRequest, db: AsyncSession = Depends(get_db)) -> 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+    """Authenticates a user and returns an access token."""
     normalized_email = payload.email.lower()
 
     result = await db.execute(select(User).where(User.email == normalized_email))
@@ -52,4 +56,5 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
 
 @router.get("/me", response_model=UserResponse)
 async def read_current_user(current_user: User = Depends(get_current_user)) -> User:
+    """Returns the currently authenticated user's details."""
     return current_user
