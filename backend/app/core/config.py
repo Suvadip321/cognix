@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     google_api_key: str
+    tavily_api_key: str
 
     app_name: str = "Cognix"
     debug: bool = False

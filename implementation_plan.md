@@ -54,9 +54,9 @@ This is what makes it impressive: it is not just "call ChatGPT and show the outp
 | Tool | What it does | Why we use it |
 |---|---|---|
 | **LangGraph** | Builds the step-by-step AI workflow | Industry-standard for agentic AI systems |
-| **Groq API** | The LLM (language model) | Very fast, has a generous free tier |
+| **Gemini API** | The LLM (language model) | 1M+ token context, generous free tier |
 | **Tavily API** | Web search | Built for AI agents, returns clean structured results |
-| **OpenAI Embeddings API** | Converts text to vectors | Reliable and widely used (`text-embedding-3-small`) |
+| **Gemini Embeddings API** | Converts text to vectors | `text-embedding-004` (No extra API key needed) |
 | **BeautifulSoup** | Reads and cleans web page content | Simple Python library, no API needed |
 | **LangSmith** | Traces and logs every LLM call | Free tier, lets you debug and demo the AI workflow visually |
 
@@ -144,7 +144,7 @@ id | session_id | title | source_url | snippet | relevance_score | credibility_s
 ### `document_chunks`
 The extracted text broken into small pieces, stored with their vector embeddings for RAG search.
 ```
-id | session_id | source_id | chunk_index | content | embedding (VECTOR 1536) | created_at
+id | session_id | source_id | chunk_index | content | embedding (VECTOR 768) | created_at
 ```
 
 ### `chat_messages`
@@ -205,8 +205,8 @@ GET    /sessions/{session_id}/questions ← Get all research questions
 This is the heart of the project. The workflow is a series of steps connected by LangGraph.
 
 ### Hard limits (keep the AI predictable and cheap)
-- Maximum **4 research questions** per topic
-- Maximum **8 final sources** used
+- Maximum **3 research questions** per topic
+- Maximum **5 final sources** used
 - Maximum **2 search passes** total
 - Maximum **1 retry** if sufficiency check fails
 - Chunk size: **800 tokens**
@@ -256,7 +256,7 @@ Each node does one thing and updates the session status in the database.
 
 **planner_node**
 - Calls the LLM with the topic
-- Gets back 3–4 focused research questions
+- Gets back exactly 3 focused research questions
 - Saves questions to the database
 - Updates session status to `planning`
 
@@ -267,7 +267,7 @@ Each node does one thing and updates the session status in the database.
 
 **evaluator_node**
 - For each result, asks the LLM to score it: relevance (1–5), credibility (1–5), usefulness (1–5)
-- Keeps the top 8 by total score
+- Keeps the top 5 by total score
 - Saves scores to the database
 - Updates session status to `evaluating_sources`
 
@@ -293,7 +293,7 @@ Each node does one thing and updates the session status in the database.
 
 **embedding_node**
 - Splits extracted text into ~800-token chunks
-- Calls OpenAI Embeddings API to get a vector for each chunk
+- Calls Gemini Embeddings API to get a vector for each chunk
 - Saves chunks + vectors to the `document_chunks` table using pgvector
 - Updates session status to `embedding`
 
@@ -461,8 +461,8 @@ Build each service as a standalone async function. Test each one individually in
 **`services/planner_service.py`**
 ```python
 async def generate_questions(topic: str) -> list[str]:
-    # Call Groq LLM
-    # Prompt: "Generate 4 focused research questions for: {topic}"
+    # Call Gemini LLM
+    # Prompt: "Generate 3 focused research questions for: {topic}"
     # Return list of question strings
 ```
 
@@ -477,7 +477,7 @@ async def search_web(questions: list[str]) -> list[dict]:
 ```python
 async def evaluate_sources(sources: list[dict], topic: str) -> list[dict]:
     # For each source, ask LLM to score relevance, credibility, usefulness (1-5 each)
-    # Sort by total score, return top 8
+    # Sort by total score, return top 5
     # Use structured output / JSON mode in the LLM call
 ```
 
@@ -509,7 +509,7 @@ async def check_sufficiency(topic: str, summaries: list[str]) -> dict:
 ```python
 async def embed_and_store(session_id: int, source_id: int, text: str, db):
     # Split text into ~800-token chunks
-    # For each chunk, call OpenAI embeddings API
+    # For each chunk, call Gemini Embeddings API
     # Save to document_chunks table with pgvector embedding
 ```
 
@@ -524,7 +524,7 @@ async def generate_report(topic: str, questions: list, summaries: list) -> str:
 **`services/retrieval_service.py`**
 ```python
 async def retrieve_chunks(session_id: int, query: str, db) -> list[str]:
-    # Embed the query using OpenAI
+    # Embed the query using Gemini
     # Run pgvector similarity search filtered by session_id
     # Return top 5 chunk content strings
 ```
@@ -696,8 +696,7 @@ No new backend work needed — the existing routes handle this.
 DATABASE_URL=postgresql+asyncpg://...
 SECRET_KEY=any-long-random-string
 TAVILY_API_KEY=
-GROQ_API_KEY=
-OPENAI_API_KEY=
+GOOGLE_API_KEY=
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=
 LANGCHAIN_PROJECT=cognix
